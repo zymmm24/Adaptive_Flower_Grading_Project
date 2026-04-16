@@ -71,7 +71,7 @@ class DynamicDetectionPipeline:
             dataset_dir: 数据集根目录，默认使用 dataset/
         """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        logger.info(f"运行设备: {self.device}")
+        logger.info(f"📡 运行设备: {self.device}")
 
         # 设置路径
         self.base_model_path = base_model_path or os.path.join(WEIGHTS_DIR, "best.pt")
@@ -83,7 +83,7 @@ class DynamicDetectionPipeline:
         os.makedirs(REPORTS_DIR, exist_ok=True)
 
         # 初始化子模块
-        logger.info("初始化流水线子模块...")
+        logger.info("🔧 初始化流水线子模块...")
 
         # 在线采样器 - 用于模拟流式数据
         self.sampler = OnlineSampler(source_dir=self.val_dir)
@@ -122,7 +122,7 @@ class DynamicDetectionPipeline:
         self._hook_handle = None
         self._current_batch_features = []
 
-        logger.info(f"DynamicDetectionPipeline 初始化完成")
+        logger.info(f"✅ DynamicDetectionPipeline 初始化完成")
         logger.info(f"   基础模型: {self.base_model_path}")
         logger.info(f"   数据集目录: {self.dataset_dir}")
         logger.info(f"   验证集目录: {self.val_dir}")
@@ -135,11 +135,11 @@ class DynamicDetectionPipeline:
                     data = pickle.load(f)
                     self.scaler = data["scaler"]
                     self.pca = data["pca"]
-                logger.info(f"已加载PCA和Scaler: {self.pca_scaler_path}")
+                logger.info(f"✅ 已加载PCA和Scaler: {self.pca_scaler_path}")
             else:
-                logger.warning(f"未找到PCA和Scaler文件: {self.pca_scaler_path}")
+                logger.warning(f"⚠️ 未找到PCA和Scaler文件: {self.pca_scaler_path}")
         except Exception as e:
-            logger.error(f"加载PCA和Scaler失败: {e}")
+            logger.error(f"❌ 加载PCA和Scaler失败: {e}")
 
     def _init_feature_extractor(self, model_path: Optional[str] = None):
         """
@@ -162,7 +162,7 @@ class DynamicDetectionPipeline:
         # 锁定分类头前一层
         layers = list(self.feature_model.model.model)
         self.target_layer_idx = len(layers) - 2
-        logger.info(f"锁定特征层: 索引 [{self.target_layer_idx}], 类型 [{layers[self.target_layer_idx].__class__.__name__}]")
+        logger.info(f"🎯 锁定特征层: 索引 [{self.target_layer_idx}], 类型 [{layers[self.target_layer_idx].__class__.__name__}]")
 
         # 注册hook
         self._register_hook()
@@ -198,7 +198,7 @@ class DynamicDetectionPipeline:
             List[Dict]: 窗口信息列表
         """
         logger.info("=" * 60)
-        logger.info("准备模拟时间窗口数据")
+        logger.info("📦 准备模拟时间窗口数据")
         logger.info("=" * 60)
         logger.info(f"窗口数量: {n_windows}")
         logger.info(f"每窗口大小: {window_size}")
@@ -217,7 +217,7 @@ class DynamicDetectionPipeline:
             window['has_perturbation'] = (i == perturbation_window)
             window['window_id'] = i
 
-        logger.info(f"已创建 {len(self.windows)} 个时间窗口")
+        logger.info(f"✅ 已创建 {len(self.windows)} 个时间窗口")
         for i, window in enumerate(self.windows):
             perturbation_mark = " [HSV扰动]" if window['has_perturbation'] else ""
             logger.info(f"   窗口 {i+1}: {window['size']} 张图片{perturbation_mark}")
@@ -248,14 +248,14 @@ class DynamicDetectionPipeline:
         os.makedirs(output_dir, exist_ok=True)
         perturbed_paths = []
 
-        logger.info(f"施加HSV扰动: H偏移={h_shift}, S缩放={s_scale}, V缩放={v_scale}")
+        logger.info(f"🎨 施加HSV扰动: H偏移={h_shift}, S缩放={s_scale}, V缩放={v_scale}")
 
         for img_path in image_paths:
             try:
                 # 读取图像
                 img = cv2.imread(img_path)
                 if img is None:
-                    logger.warning(f"无法读取图像: {img_path}")
+                    logger.warning(f"⚠️ 无法读取图像: {img_path}")
                     continue
 
                 # 转换到HSV色彩空间
@@ -276,11 +276,11 @@ class DynamicDetectionPipeline:
                 perturbed_paths.append(out_path)
 
             except Exception as e:
-                logger.error(f"处理图像失败 {img_path}: {e}")
+                logger.error(f"❌ 处理图像失败 {img_path}: {e}")
                 # 如果处理失败，使用原图
                 perturbed_paths.append(img_path)
 
-        logger.info(f"HSV扰动完成: {len(perturbed_paths)}/{len(image_paths)} 张图片")
+        logger.info(f"✅ HSV扰动完成: {len(perturbed_paths)}/{len(image_paths)} 张图片")
         return perturbed_paths
 
     def extract_window_features(self, image_paths: List[str], labels: List[int]) -> np.ndarray:
@@ -302,7 +302,7 @@ class DynamicDetectionPipeline:
         if self.feature_model is None:
             self._init_feature_extractor()
 
-        logger.info(f"提取特征: {len(image_paths)} 张图片")
+        logger.info(f"🔍 提取特征: {len(image_paths)} 张图片")
 
         all_records = []
 
@@ -319,7 +319,7 @@ class DynamicDetectionPipeline:
 
             for res in results:
                 if not self._current_batch_features:
-                    logger.warning(f"未抓取到特征: {res.path}")
+                    logger.warning(f"⚠️ 未抓取到特征: {res.path}")
                     continue
 
                 img_emb = self._current_batch_features.pop(0)
@@ -336,11 +336,11 @@ class DynamicDetectionPipeline:
                 all_records.append(record)
 
         except Exception as e:
-            logger.error(f"特征提取失败: {e}")
+            logger.error(f"❌ 特征提取失败: {e}")
             raise
 
         if not all_records:
-            logger.warning("没有提取到任何特征")
+            logger.warning("⚠️ 没有提取到任何特征")
             return np.array([])
 
         # 转换为DataFrame并应用PCA+Scaler
@@ -349,10 +349,10 @@ class DynamicDetectionPipeline:
 
         if self.pca is not None and self.scaler is not None:
             X_pca = self.pca.transform(self.scaler.transform(X))
-            logger.info(f"特征提取完成: {X_pca.shape}")
+            logger.info(f"✅ 特征提取完成: {X_pca.shape}")
             return X_pca.astype(np.float32)
         else:
-            logger.warning("未加载PCA和Scaler，返回原始特征")
+            logger.warning("⚠️ 未加载PCA和Scaler，返回原始特征")
             return X.astype(np.float32)
 
     def detect_drift_for_window(self, window_features: np.ndarray,
@@ -371,7 +371,7 @@ class DynamicDetectionPipeline:
         Returns:
             Dict: 漂移检测结果
         """
-        logger.info(f"执行窗口 {window_id + 1} 的漂移检测...")
+        logger.info(f"🔍 执行窗口 {window_id + 1} 的漂移检测...")
 
         try:
             # 获取基准数据
@@ -434,13 +434,13 @@ class DynamicDetectionPipeline:
                 }
             }
 
-            status_icon = "" if is_drift else ""
+            status_icon = "🚨" if is_drift else "✅"
             logger.info(f"{status_icon} 窗口 {window_id + 1} 检测完成: MMD={mmd_score:.4f}, p-value={p_value:.4f}, 状态={result['status']}")
 
             return result
 
         except Exception as e:
-            logger.error(f"漂移检测失败: {e}")
+            logger.error(f"❌ 漂移检测失败: {e}")
             import traceback
             traceback.print_exc()
             return {
@@ -459,7 +459,7 @@ class DynamicDetectionPipeline:
         Returns:
             Dict: 分级统计结果
         """
-        logger.info(f"对 {len(image_paths)} 张图片进行颜色分级...")
+        logger.info(f"🎨 对 {len(image_paths)} 张图片进行颜色分级...")
 
         grade_counts = {1: 0, 2: 0, 3: 0, 4: 0}
         total_confidence = 0
@@ -474,7 +474,7 @@ class DynamicDetectionPipeline:
                 total_confidence += confidence
                 successful += 1
             except Exception as e:
-                logger.warning(f"分级失败 {img_path}: {e}")
+                logger.warning(f"⚠️ 分级失败 {img_path}: {e}")
 
         total = successful if successful > 0 else 1
 
@@ -489,7 +489,7 @@ class DynamicDetectionPipeline:
             "total_processed": successful
         }
 
-        logger.info(f"分级完成: 等级1={grade_counts[1]}, 等级2={grade_counts[2]}, 等级3={grade_counts[3]}, 等级4={grade_counts[4]}")
+        logger.info(f"✅ 分级完成: 等级1={grade_counts[1]}, 等级2={grade_counts[2]}, 等级3={grade_counts[3]}, 等级4={grade_counts[4]}")
         return result
 
     def run_pipeline(self, n_windows: int = 4,
@@ -530,14 +530,14 @@ class DynamicDetectionPipeline:
             }
         """
         logger.info("=" * 60)
-        logger.info("启动动态数据检测流水线")
+        logger.info("🚀 启动动态数据检测流水线")
         logger.info("=" * 60)
 
         # 步骤1: 准备时间窗口
         self.prepare_windows(n_windows, perturbation_window, window_size)
 
         if not self.windows:
-            logger.error("没有可用的窗口数据")
+            logger.error("❌ 没有可用的窗口数据")
             return {"error": "No windows available"}
 
         self.window_results = []
@@ -551,7 +551,7 @@ class DynamicDetectionPipeline:
         for i, window in enumerate(self.windows):
             logger.info("")
             logger.info("=" * 60)
-            logger.info(f"处理窗口 {i + 1}/{len(self.windows)}")
+            logger.info(f"📊 处理窗口 {i + 1}/{len(self.windows)}")
             logger.info("=" * 60)
 
             window_id = window['window_id']
@@ -562,7 +562,7 @@ class DynamicDetectionPipeline:
             try:
                 # 如果是扰动窗口，施加HSV扰动
                 if has_perturbation:
-                    logger.info(f"窗口 {i + 1} 是扰动窗口，施加HSV扰动...")
+                    logger.info(f"🎨 窗口 {i + 1} 是扰动窗口，施加HSV扰动...")
                     image_paths = self.apply_hsv_perturbation(
                         image_paths,
                         h_shift=random.randint(15, 25),
@@ -572,19 +572,19 @@ class DynamicDetectionPipeline:
                     )
 
                 # 步骤2: 特征提取
-                logger.info(f"窗口 {i + 1}: 提取特征...")
+                logger.info(f"🔍 窗口 {i + 1}: 提取特征...")
                 window_features = self.extract_window_features(image_paths, labels)
 
                 if len(window_features) == 0:
-                    logger.warning(f"窗口 {i + 1} 没有提取到特征，跳过")
+                    logger.warning(f"⚠️ 窗口 {i + 1} 没有提取到特征，跳过")
                     continue
 
                 # 步骤3: 漂移检测
-                logger.info(f"窗口 {i + 1}: 执行漂移检测...")
+                logger.info(f"🔍 窗口 {i + 1}: 执行漂移检测...")
                 drift_result = self.detect_drift_for_window(window_features, labels, window_id)
 
                 # 步骤4: 颜色分级
-                logger.info(f"窗口 {i + 1}: 执行颜色分级...")
+                logger.info(f"🎨 窗口 {i + 1}: 执行颜色分级...")
                 grade_result = self.grade_window_images(image_paths)
 
                 # 判断是否触发训练（仅在前面的窗口，且未触发过训练）
@@ -595,7 +595,7 @@ class DynamicDetectionPipeline:
                     has_perturbation):
 
                     logger.info("=" * 60)
-                    logger.info(f"窗口 {i + 1} 检测到显著漂移，触发增量训练！")
+                    logger.info(f"🚨 窗口 {i + 1} 检测到显著漂移，触发增量训练！")
                     logger.info(f"   MMD={drift_result['mmd_score']:.4f} >= 阈值={drift_threshold}")
                     logger.info("=" * 60)
 
@@ -611,91 +611,11 @@ class DynamicDetectionPipeline:
                             mix_ratio=0.3
                         )
 
-                        # 在训练前，先评估基础模型性能
-                        base_model_accuracy = None
-                        base_model_original_accuracy = None
-                        logger.info("评估基础模型性能...")
-                        try:
-                            base_model_for_eval = YOLO(self.current_model_path)
-                            # 1. 在原始验证集上评估（作为参考基准）
-                            logger.info("   1) 在原始验证集上评估基础模型...")
-                            if os.path.exists(os.path.join(self.dataset_dir, 'val')):
-                                try:
-                                    orig_val_results = base_model_for_eval.val(
-                                        data=self.dataset_dir,
-                                        imgsz=224,
-                                        device=self.auto_trainer.device
-                                    )
-                                    if hasattr(orig_val_results, 'top1'):
-                                        base_model_original_accuracy = float(orig_val_results.top1)
-                                    logger.info(f"   原始验证集准确率: {base_model_original_accuracy:.4f}")
-                                except Exception as e:
-                                    logger.warning(f"   原始验证集评估失败: {e}")
-                            # 2. 在混合验证集上评估（与增量训练后模型公平对比）
-                            logger.info(f"   2) 在混合验证集上评估基础模型: {mixed_data_dir}")
-                            base_val_results = base_model_for_eval.val(
-                                data=mixed_data_dir,
-                                imgsz=224,
-                                device=self.auto_trainer.device
-                            )
-                            if hasattr(base_val_results, 'top1'):
-                                base_model_accuracy = float(base_val_results.top1)
-                            elif hasattr(base_val_results, 'results_dict'):
-                                rd = base_val_results.results_dict
-                                for key in rd:
-                                    if 'accuracy_top1' in key or 'top1' in key.lower():
-                                        base_model_accuracy = float(rd[key])
-                                        break
-                            
-                            if base_model_accuracy is not None:
-                                logger.info(f"   混合验证集准确率: {base_model_accuracy:.4f}")
-                                if base_model_original_accuracy is not None:
-                                    drop = base_model_original_accuracy - base_model_accuracy
-                                    logger.info(f"   环境变化导致准确率下降: {drop:.2%} ({base_model_original_accuracy:.2%} -> {base_model_accuracy:.2%})")
-                            else:
-                                logger.warning(f"   无法提取基础模型准确率")
-                        except Exception as e:
-                            logger.warning(f"   基础模型评估失败: {e}")
-                            import traceback
-                            traceback.print_exc()
-
                         train_result = self.auto_trainer.incremental_train(
                             data_dir=mixed_data_dir,
-                            epochs=50,  # 增加到 50 轮，充分训练
+                            epochs=5,  # 增量训练轮数较少
                             lr=0.001
                         )
-
-                        # 将基础模型准确率加入训练结果
-                        if base_model_accuracy is not None:
-                            train_result['base_model_accuracy'] = base_model_accuracy
-                        if base_model_original_accuracy is not None:
-                            train_result['base_model_original_accuracy'] = base_model_original_accuracy
-
-                        # 评估增量训练后模型在原始验证集上的准确率（检测遗忘）
-                        post_train_original_accuracy = None
-                        logger.info("评估增量训练后模型在原始验证集上的性能...")
-                        try:
-                            trained_model_for_eval = YOLO(train_result['model_path'])
-                            if os.path.exists(os.path.join(self.dataset_dir, 'val')):
-                                orig_val_results = trained_model_for_eval.val(
-                                    data=self.dataset_dir,
-                                    imgsz=224,
-                                    device=self.auto_trainer.device
-                                )
-                                if hasattr(orig_val_results, 'top1'):
-                                    post_train_original_accuracy = float(orig_val_results.top1)
-                                logger.info(f"   原始验证集准确率: {post_train_original_accuracy:.4f}")
-                                if base_model_original_accuracy is not None:
-                                    diff = post_train_original_accuracy - base_model_original_accuracy
-                                    if diff < 0:
-                                        logger.warning(f"   遗忘程度: {abs(diff):.2%} ({base_model_original_accuracy:.2%} -> {post_train_original_accuracy:.2%})")
-                                    else:
-                                        logger.info(f"   保持良好: 相比基础模型提升 {diff:.2%}")
-                        except Exception as e:
-                            logger.warning(f"   原始验证集评估失败: {e}")
-                        
-                        if post_train_original_accuracy is not None:
-                            train_result['post_train_original_accuracy'] = post_train_original_accuracy
 
                         # 模型融合
                         fused_model_path = self.auto_trainer.model_fusion(
@@ -712,20 +632,17 @@ class DynamicDetectionPipeline:
                             "original_model": self.base_model_path,
                             "new_model": train_result['model_path'],
                             "fused_model": fused_model_path,
-                            "metrics": train_result.get('metrics', {}),
-                            "base_model_accuracy": train_result.get('base_model_accuracy', None),
-                            "base_model_original_accuracy": train_result.get('base_model_original_accuracy', None),
-                            "post_train_original_accuracy": train_result.get('post_train_original_accuracy', None)
+                            "metrics": train_result.get('metrics', {})
                         }
 
                         # 重新初始化特征提取器使用新模型
                         self._init_feature_extractor(fused_model_path)
 
                         triggered_training = True
-                        logger.info(f"增量训练完成，新模型: {fused_model_path}")
+                        logger.info(f"✅ 增量训练完成，新模型: {fused_model_path}")
 
                     except Exception as e:
-                        logger.error(f"增量训练失败: {e}")
+                        logger.error(f"❌ 增量训练失败: {e}")
                         import traceback
                         traceback.print_exc()
 
@@ -749,12 +666,12 @@ class DynamicDetectionPipeline:
                 self.window_results.append(window_result)
 
                 # 输出窗口摘要
-                drift_icon = "" if window_result['is_drift'] else ""
+                drift_icon = "🚨" if window_result['is_drift'] else "✅"
                 logger.info(f"{drift_icon} 窗口 {i + 1} 完成: MMD={window_result['mmd_score']:.4f}, "
                            f"漂移={window_result['is_drift']}, 训练触发={triggered_training}")
 
             except Exception as e:
-                logger.error(f"窗口 {i + 1} 处理失败: {e}")
+                logger.error(f"❌ 窗口 {i + 1} 处理失败: {e}")
                 import traceback
                 traceback.print_exc()
                 # 继续处理下一个窗口
@@ -777,7 +694,7 @@ class DynamicDetectionPipeline:
 
         logger.info("")
         logger.info("=" * 60)
-        logger.info("动态检测流水线执行完成")
+        logger.info("✅ 动态检测流水线执行完成")
         logger.info("=" * 60)
         logger.info(f"处理窗口数: {len(self.window_results)}")
         logger.info(f"触发训练: {self.has_triggered_training}")
@@ -803,7 +720,7 @@ class DynamicDetectionPipeline:
             dst_path = os.path.join(class_dir, os.path.basename(img_path))
             shutil.copy2(img_path, dst_path)
 
-        logger.info(f"窗口数据已保存到: {output_dir}")
+        logger.info(f"📦 窗口数据已保存到: {output_dir}")
 
     def _generate_summary(self) -> str:
         """生成文本摘要"""
@@ -852,7 +769,7 @@ class DynamicDetectionPipeline:
             str: 报告目录路径
         """
         logger.info("=" * 60)
-        logger.info("生成流水线汇总报告")
+        logger.info("📊 生成流水线汇总报告")
         logger.info("=" * 60)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -868,7 +785,7 @@ class DynamicDetectionPipeline:
             with open(window_report_path, 'w', encoding='utf-8') as f:
                 json.dump(window_result, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"已保存 {len(windows)} 个窗口的详细报告")
+        logger.info(f"✅ 已保存 {len(windows)} 个窗口的详细报告")
 
         # 2. 生成漂移趋势图
         if len(windows) > 0:
@@ -883,29 +800,29 @@ class DynamicDetectionPipeline:
                 threshold=0.05,
                 save_name="drift_trend.png"
             )
-            logger.info(f"漂移趋势图已保存: {trend_path}")
+            logger.info(f"✅ 漂移趋势图已保存: {trend_path}")
 
         # 3. 生成汇总JSON
         summary_path = os.path.join(report_dir, "pipeline_summary.json")
         with open(summary_path, 'w', encoding='utf-8') as f:
             json.dump(pipeline_result, f, ensure_ascii=False, indent=2)
-        logger.info(f"汇总报告已保存: {summary_path}")
+        logger.info(f"✅ 汇总报告已保存: {summary_path}")
 
         # 4. 生成文本摘要
         summary_text_path = os.path.join(report_dir, "summary.txt")
         with open(summary_text_path, 'w', encoding='utf-8') as f:
             f.write(pipeline_result.get('summary', 'No summary available'))
-        logger.info(f"文本摘要已保存: {summary_text_path}")
+        logger.info(f"✅ 文本摘要已保存: {summary_text_path}")
 
         # 5. 生成HTML可视化报告
         html_content = self._generate_html_report(pipeline_result, report_dir)
         html_path = os.path.join(report_dir, "pipeline_report.html")
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
-        logger.info(f"HTML报告已保存: {html_path}")
+        logger.info(f"✅ HTML报告已保存: {html_path}")
 
         logger.info("=" * 60)
-        logger.info(f"所有报告已保存到: {report_dir}")
+        logger.info(f"✅ 所有报告已保存到: {report_dir}")
         logger.info("=" * 60)
 
         return report_dir
@@ -934,9 +851,9 @@ class DynamicDetectionPipeline:
             is_drift = w.get('is_drift', False)
             triggered = w.get('triggered_training', False)
 
-            perturbation_cell = "是" if has_perturbation else "否"
-            drift_cell = f"{'漂移' if is_drift else '稳定'} ({mmd:.4f})"
-            training_cell = "已触发" if triggered else "-"
+            perturbation_cell = "✅ 是" if has_perturbation else "否"
+            drift_cell = f"{'🚨 漂移' if is_drift else '✅ 稳定'} ({mmd:.4f})"
+            training_cell = "✅ 已触发" if triggered else "-"
 
             # 分级分布
             grade_dist = w.get('grade_distribution', {})
@@ -957,16 +874,12 @@ class DynamicDetectionPipeline:
             </tr>
             """
 
-        # 训练信息（增强版）
+        # 训练信息
         training_section = ""
         if training_result:
-            metrics = training_result.get('metrics', {})
-            top1_acc = metrics.get('top1_accuracy', None)
-            top1_display = f"{top1_acc:.2%}" if top1_acc is not None else 'N/A'
-            
             training_section = f"""
             <div class="section">
-                <h2>增量训练信息</h2>
+                <h2>🔄 增量训练信息</h2>
                 <div class="info-grid">
                     <div class="info-item">
                         <label>触发窗口</label>
@@ -976,218 +889,9 @@ class DynamicDetectionPipeline:
                         <label>融合模型</label>
                         <value>{os.path.basename(training_result.get('fused_model', 'N/A'))}</value>
                     </div>
-                    <div class="info-item">
-                        <label>训练后 Top-1 准确率</label>
-                        <value style="color: #27ae60; font-weight: bold; font-size: 1.2em;">{top1_display}</value>
-                    </div>
-                </div>
-                <h3 style="margin-top: 20px; color: #667eea;">训练配置</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <label>训练轮数 (Epochs)</label>
-                        <value>{metrics.get('epochs', 'N/A')}</value>
-                    </div>
-                    <div class="info-item">
-                        <label>学习率</label>
-                        <value>{metrics.get('learning_rate', 'N/A')}</value>
-                    </div>
-                    <div class="info-item">
-                        <label>批次大小</label>
-                        <value>{metrics.get('batch', 'N/A')}</value>
-                    </div>
-                    <div class="info-item">
-                        <label>图片尺寸</label>
-                        <value>{metrics.get('imgsz', 'N/A')}</value>
-                    </div>
                 </div>
             </div>
             """
-
-        # MMD 对比（训练前后）
-        mmd_comparison = ""
-        if training_result and len(windows) >= 2:
-            drift_window = None
-            post_drift_window = None
-            for w in windows:
-                if w.get('triggered_training', False) and drift_window is None:
-                    drift_window = w
-                elif drift_window is not None and post_drift_window is None:
-                    post_drift_window = w
-            
-            if drift_window and post_drift_window:
-                mmd_before = drift_window.get('mmd_score', 0)
-                mmd_after = post_drift_window.get('mmd_score', 0)
-                improvement = ((mmd_before - mmd_after) / mmd_before * 100) if mmd_before > 0 else 0
-                
-                mmd_comparison = f"""
-                <div class="section">
-                    <h2>训练效果评估</h2>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <label>训练前 MMD (窗口{drift_window['window_id'] + 1})</label>
-                            <value style="color: #e74c3c;">{mmd_before:.4f}</value>
-                        </div>
-                        <div class="info-item">
-                            <label>训练后 MMD (窗口{post_drift_window['window_id'] + 1})</label>
-                            <value style="color: #27ae60;">{mmd_after:.4f}</value>
-                        </div>
-                        <div class="info-item">
-                            <label>MMD 降幅</label>
-                            <value style="color: #27ae60;">{improvement:.1f}%</value>
-                        </div>
-                        <div class="info-item">
-                            <label>改善效果</label>
-                            <value style="color: #27ae60;">{"显著" if improvement > 50 else "一般"}</value>
-                        </div>
-                    </div>
-                </div>
-                """
-        
-        # 基础模型对比
-        base_model_comparison = ""
-        if training_result:
-            metrics = training_result.get('metrics', {})
-            top1_acc = metrics.get('top1_accuracy', None)
-            
-            if top1_acc is not None:
-                base_accuracy = training_result.get('base_model_accuracy', None)
-                base_original_acc = training_result.get('base_model_original_accuracy', None)
-                post_train_original_acc = training_result.get('post_train_original_accuracy', None)
-                
-                if base_accuracy is not None:
-                    accuracy_diff = top1_acc - base_accuracy
-                    diff_symbol = "↑" if accuracy_diff >= 0 else "↓"
-                    diff_color = "#27ae60" if accuracy_diff >= 0 else "#e74c3c"
-                    
-                    # 构建环境变化影响提示
-                    env_impact_note = ""
-                    if base_original_acc is not None:
-                        env_drop = base_original_acc - base_accuracy
-                        env_impact_note = f"""
-                    <div style="margin-top: 15px; padding: 12px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 4px;">
-                        <strong>环境变化影响：</strong>基础模型在<strong>原始数据</strong>上准确率为 <strong style="color: #27ae60;">{base_original_acc:.2%}</strong>，
-                        但在<strong>新环境数据（HSV扰动）</strong>上降至 <strong style="color: #e74c3c;">{base_accuracy:.2%}</strong>，
-                        下降 <strong style="color: #e74c3c;">{env_drop:.2%}</strong>，说明模型对环境变化适应性不足，需要增量训练。
-                    </div>"""
-                else:
-                    accuracy_diff = None
-                    diff_symbol = "-"
-                    diff_color = "#6c757d"
-                    env_impact_note = ""
-                
-                # 遗忘检测提示
-                forgetting_note = ""
-                if post_train_original_acc is not None and base_original_acc is not None:
-                    forget_diff = post_train_original_acc - base_original_acc
-                    if forget_diff < -0.05:  # 下降超过5%
-                        forgetting_note = f"""
-                    <div style="margin-top: 15px; padding: 12px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 4px;">
-                        <strong>遗忘警告：</strong>增量训练后模型在原始验证集上准确率为 <strong style="color: #e74c3c;">{post_train_original_acc:.2%}</strong>，
-                        相比基础模型下降 <strong style="color: #e74c3c;">{abs(forget_diff):.2%}</strong>，
-                        存在一定程度的遗忘，建议增加旧数据比例或降低学习率。
-                    </div>"""
-                    elif forget_diff < 0:
-                        forgetting_note = f"""
-                    <div style="margin-top: 15px; padding: 12px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 4px;">
-                        <strong>轻微遗忘：</strong>增量训练后模型在原始验证集上准确率为 <strong style="color: #ff9800;">{post_train_original_acc:.2%}</strong>，
-                        相比基础模型下降 <strong style="color: #ff9800;">{abs(forget_diff):.2%}</strong>，
-                        在可接受范围内。
-                    </div>"""
-                    else:
-                        forgetting_note = f"""
-                    <div style="margin-top: 15px; padding: 12px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px;">
-                        <strong>无遗忘：</strong>增量训练后模型在原始验证集上准确率为 <strong style="color: #27ae60;">{post_train_original_acc:.2%}</strong>，
-                        相比基础模型提升 <strong style="color: #27ae60;">{forget_diff:.2%}</strong>，
-                        模型成功保持原有知识。
-                    </div>"""
-                
-                base_model_comparison = f"""
-                <div class="section">
-                    <h2>模型性能对比</h2>
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                        <thead>
-                            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                <th style="padding: 12px; text-align: left; border-radius: 6px 0 0 0;">模型</th>
-                                <th style="padding: 12px; text-align: center;">测试集</th>
-                                <th style="padding: 12px; text-align: center;">Top-1 准确率</th>
-                                <th style="padding: 12px; text-align: center; border-radius: 0 6px 0 0;">对比变化</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr style="background: #f0f4ff;">
-                                <td style="padding: 12px; border-bottom: 1px solid #dee2e6;">
-                                    <strong>基础模型</strong><br>
-                                    <small style="color: #6c757d;">原始数据基准</small>
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; color: #6c757d;">
-                                    原始验证集
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; font-size: 1.1em; color: #27ae60;">
-                                    {f"{base_original_acc:.2%}" if base_original_acc is not None else "未测试"}
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; color: #6c757d;">
-                                    基准
-                                </td>
-                            </tr>
-                            <tr style="background: #fff5f5;">
-                                <td style="padding: 12px; border-bottom: 1px solid #dee2e6;">
-                                    <strong>基础模型</strong><br>
-                                    <small style="color: #e74c3c;">新环境数据</small>
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; color: #6c757d;">
-                                    混合验证集
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; font-size: 1.1em; color: #e74c3c;">
-                                    {f"{base_accuracy:.2%}" if base_accuracy is not None else "未测试"}
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; color: #e74c3c;">
-                                    {f"↓ {abs(base_original_acc - base_accuracy):.2%}" if (base_accuracy is not None and base_original_acc is not None) else "-"}
-                                </td>
-                            </tr>
-                            <tr style="background: white;">
-                                <td style="padding: 12px; border-bottom: 1px solid #dee2e6;">
-                                    <strong>增量训练后</strong><br>
-                                    <small style="color: #27ae60;">适应新环境</small>
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; color: #6c757d;">
-                                    混合验证集
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; font-size: 1.2em; color: #27ae60; font-weight: bold;">
-                                    {top1_acc:.2%}
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; font-size: 1.1em; color: {diff_color}; font-weight: bold;">
-                                    {f"{diff_symbol} {abs(accuracy_diff):.2%}" if accuracy_diff is not None else "-"}
-                                </td>
-                            </tr>
-                            <tr style="background: #f8f9fa;">
-                                <td style="padding: 12px; border-bottom: 1px solid #dee2e6;">
-                                    <strong>增量训练后</strong><br>
-                                    <small style="color: #667eea;">保持原有知识</small>
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; color: #6c757d;">
-                                    原始验证集
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; font-size: 1.1em; color: #667eea;">
-                                    {f"{post_train_original_acc:.2%}" if post_train_original_acc is not None else "未测试"}
-                                </td>
-                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; color: #6c757d;">
-                                    {"↓" if (post_train_original_acc is not None and base_original_acc is not None and post_train_original_acc < base_original_acc) else ("↑" if (post_train_original_acc is not None and base_original_acc is not None and post_train_original_acc >= base_original_acc) else "-")}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    {env_impact_note}
-                    {forgetting_note}
-                    <div style="margin-top: 15px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px;">
-                        <strong>说明：</strong><br>
-                        - <strong>第1行</strong>：基础模型在原始验证集上的准确率，反映模型本身能力<br>
-                        - <strong>第2行</strong>：同一基础模型在新环境数据（含HSV扰动）上的准确率，体现环境变化影响<br>
-                        - <strong>第3行</strong>：增量训练后模型在混合验证集上的准确率，与第2行公平对比<br>
-                        - <strong>第4行</strong>：增量训练后模型在原始验证集上的准确率，检测是否遗忘旧知识<br>
-                        {"- <strong>结论</strong>：增量训练使模型在新环境数据上准确率" + ("提升" if (accuracy_diff is not None and accuracy_diff >= 0) else "下降") + f" {abs(accuracy_diff):.2%}，训练" + ("有效，成功适应环境变化" if (accuracy_diff is not None and accuracy_diff >= 0) else "需要更多数据或轮数") if accuracy_diff is not None else ""}
-                    </div>
-                </div>
-                """
 
         # 检查是否有漂移趋势图
         trend_img = ""
@@ -1302,13 +1006,13 @@ class DynamicDetectionPipeline:
 </head>
 <body>
     <div class="header">
-        <h1>动态数据检测流水线报告</h1>
+        <h1>🌸 动态数据检测流水线报告</h1>
         <p>Dynamic Data Detection Pipeline Report</p>
         <p>生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     </div>
 
     <div class="section">
-        <h2>窗口检测结果汇总</h2>
+        <h2>📊 窗口检测结果汇总</h2>
         <table>
             <thead>
                 <tr>
@@ -1329,12 +1033,8 @@ class DynamicDetectionPipeline:
 
     {training_section}
 
-    {mmd_comparison}
-
-    {base_model_comparison}
-
     <div class="section">
-        <h2>漂移趋势图</h2>
+        <h2>📈 漂移趋势图</h2>
         <div class="chart-container">
             {trend_img if trend_img else '<p>未生成趋势图</p>'}
         </div>
@@ -1383,6 +1083,6 @@ if __name__ == "__main__":
     report_dir = pipeline.generate_summary_report(result)
 
     print("\n" + "=" * 60)
-    print("流水线执行完成！")
-    print(f"报告目录: {report_dir}")
+    print("✅ 流水线执行完成！")
+    print(f"📊 报告目录: {report_dir}")
     print("=" * 60)

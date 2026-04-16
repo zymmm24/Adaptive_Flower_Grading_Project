@@ -25,3 +25,10 @@ Thumbs.db
 *.png
 *.json
 runs/
+
+# Temporary data
+temp_perturbed/
+temp_incremental_data/
+incremental_data/
+sampling_data/
+reports/
