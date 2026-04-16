@@ -54,13 +54,13 @@ class DriftVisualizer:
                     plt.rcParams['font.sans-serif'] = [font_name] + plt.rcParams['font.sans-serif']
                     plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
                     self.use_chinese = True
-                    logger.info(f"✅ 使用字体: {font_name}")
+                    logger.info(f"使用字体: {font_name}")
                     break
             
             if not self.use_chinese:
-                logger.warning("⚠️ 未找到中文字体，将使用英文标签")
+                logger.warning("未找到中文字体，将使用英文标签")
         except Exception as e:
-            logger.warning(f"⚠️ 字体配置失败: {e}")
+            logger.warning(f"字体配置失败: {e}")
     
     def _get_text(self, chinese, english):
         """根据字体支持返回中文或英文文本"""
@@ -72,7 +72,7 @@ class DriftVisualizer:
         fig.savefig(save_path, dpi=150, bbox_inches='tight', 
                    facecolor='white', edgecolor='none')
         plt.close(fig)
-        logger.info(f"📊 图表已保存: {save_path}")
+        logger.info(f"图表已保存: {save_path}")
         return save_path
     
     def plot_pca_scatter(self, baseline_emb, current_emb, 
@@ -159,7 +159,7 @@ class DriftVisualizer:
             return self._save_figure(fig, save_name)
             
         except Exception as e:
-            logger.error(f"❌ PCA散点图生成失败: {e}")
+            logger.error(f"PCA散点图生成失败: {e}")
             return None
     
     def plot_drift_trend(self, mmd_history, window_labels=None,
@@ -220,7 +220,7 @@ class DriftVisualizer:
             return self._save_figure(fig, save_name)
             
         except Exception as e:
-            logger.error(f"❌ 漂移趋势图生成失败: {e}")
+            logger.error(f"漂移趋势图生成失败: {e}")
             return None
     
     def plot_class_drift_heatmap(self, per_class_results, 
@@ -278,7 +278,7 @@ class DriftVisualizer:
             return self._save_figure(fig, save_name)
             
         except Exception as e:
-            logger.error(f"❌ 类别漂移热力图生成失败: {e}")
+            logger.error(f"类别漂移热力图生成失败: {e}")
             return None
     
     def plot_feature_importance(self, feature_drift_details,
@@ -299,7 +299,7 @@ class DriftVisualizer:
             sorted_features = sorted(feature_drift_details, key=lambda x: x['pval'])[:20]
             
             if not sorted_features:
-                logger.warning("⚠️ 没有特征漂移数据")
+                logger.warning("没有特征漂移数据")
                 return None
             
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 8), dpi=150)
@@ -347,7 +347,7 @@ class DriftVisualizer:
             return self._save_figure(fig, save_name)
             
         except Exception as e:
-            logger.error(f"❌ 特征重要性图生成失败: {e}")
+            logger.error(f"特征重要性图生成失败: {e}")
             return None
     
     def plot_sample_anomaly_distribution(self, anomaly_scores,
@@ -413,7 +413,7 @@ class DriftVisualizer:
             return self._save_figure(fig, save_name)
             
         except Exception as e:
-            logger.error(f"❌ 异常分布图生成失败: {e}")
+            logger.error(f"异常分布图生成失败: {e}")
             return None
     
     def plot_training_comparison(self, before_metrics, after_metrics,
@@ -479,7 +479,7 @@ class DriftVisualizer:
             return self._save_figure(fig, save_name)
             
         except Exception as e:
-            logger.error(f"❌ 训练对比图生成失败: {e}")
+            logger.error(f"训练对比图生成失败: {e}")
             return None
     
     def generate_full_report(self, drift_result=None, drift_report_path=None,
@@ -510,7 +510,7 @@ class DriftVisualizer:
                 with open(drift_report_path, 'r', encoding='utf-8') as f:
                     report_data = json.load(f)
             except Exception as e:
-                logger.error(f"❌ 加载报告失败: {e}")
+                logger.error(f"加载报告失败: {e}")
                 return None
         else:
             # 尝试加载默认报告
@@ -522,17 +522,17 @@ class DriftVisualizer:
                     with open(json_path, 'r', encoding='utf-8') as f:
                         report_data = json.load(f)
                 except Exception as e:
-                    logger.error(f"❌ 加载默认报告失败: {e}")
+                    logger.error(f"加载默认报告失败: {e}")
                     return None
             elif os.path.exists(default_path):
                 try:
                     with open(default_path, 'rb') as f:
                         report_data = pickle.load(f)
                 except Exception as e:
-                    logger.error(f"❌ 加载默认报告失败: {e}")
+                    logger.error(f"加载默认报告失败: {e}")
                     return None
             else:
-                logger.error("❌ 未找到漂移报告数据")
+                logger.error("未找到漂移报告数据")
                 return None
         
         chart_paths = []
@@ -571,11 +571,11 @@ class DriftVisualizer:
             html_path = os.path.join(self.output_dir, 'drift_visualization_report.html')
             self._generate_html_report(chart_paths, report_data, html_path)
             
-            logger.info(f"✅ 完整报告已生成: {html_path}")
+            logger.info(f"完整报告已生成: {html_path}")
             return html_path
             
         except Exception as e:
-            logger.error(f"❌ 生成完整报告失败: {e}")
+            logger.error(f"生成完整报告失败: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -714,15 +714,15 @@ class DriftVisualizer:
 </head>
 <body>
     <div class="header">
-        <h1>🌸 漂移分析可视化报告</h1>
+        <h1>漂移分析可视化报告</h1>
         <p>Drift Analysis Visualization Report</p>
         <span class="status {'drift' if is_drift else 'stable'}">
-            {'⚠️ 检测到漂移' if is_drift else '✅ 数据稳定'} | {status}
+            {'检测到漂移' if is_drift else '数据稳定'} | {status}
         </span>
     </div>
     
     <div class="summary">
-        <h2>📊 检测摘要</h2>
+        <h2>检测摘要</h2>
         <div class="summary-grid">
             <div class="summary-item">
                 <label>MMD 分数</label>
@@ -761,7 +761,7 @@ class DriftVisualizer:
             logger.info(f"📄 HTML报告已生成: {output_path}")
             
         except Exception as e:
-            logger.error(f"❌ HTML报告生成失败: {e}")
+            logger.error(f"HTML报告生成失败: {e}")
 
 
 # ------------------------------
@@ -777,14 +777,14 @@ if __name__ == "__main__":
         if os.path.exists(report_path):
             html_path = visualizer.generate_full_report(drift_report_path=report_path)
             if html_path:
-                logger.info(f"✅ 可视化报告生成成功: {html_path}")
+                logger.info(f"可视化报告生成成功: {html_path}")
             else:
-                logger.error("❌ 报告生成失败")
+                logger.error("报告生成失败")
         else:
-            logger.warning(f"⚠️ 未找到报告文件: {report_path}")
+            logger.warning(f"未找到报告文件: {report_path}")
             logger.info("请提供 drift_result 字典或 drift_report_path 参数")
             
     except Exception as e:
-        logger.error(f"❌ 脚本执行失败: {e}")
+        logger.error(f"脚本执行失败: {e}")
         import traceback
         traceback.print_exc()

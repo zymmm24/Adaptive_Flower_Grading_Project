@@ -52,15 +52,15 @@ class QualityGrader:
         self.model_path = model_path
         
         # 加载 YOLO11 模型
-        logger.info(f"🚀 正在加载 YOLO11 模型: {model_path}")
+        logger.info(f"正在加载 YOLO11 模型: {model_path}")
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"模型文件不存在: {model_path}")
         self.model = YOLO(model_path)
-        logger.info("✅ YOLO11 模型加载完成")
+        logger.info("YOLO11 模型加载完成")
         
         # 初始化颜色分级器
         self.color_grader = ColorGrader(season=season)
-        logger.info(f"✅ ColorGrader 初始化完成，季节: {season}")
+        logger.info(f"ColorGrader 初始化完成，季节: {season}")
         
         # 漂移报告路径
         self.drift_report_path = os.path.join(BASE_DIR, "drift_report.json")
@@ -228,7 +228,7 @@ class QualityGrader:
                 self.HSV_WEIGHT * hsv_confidence
             )
             
-            logger.info(f"✅ 分级完成: 等级={final_grade}, 融合分数={fusion_score:.2f}")
+            logger.info(f"分级完成: 等级={final_grade}, 融合分数={fusion_score:.2f}")
             
             # 构建返回结果
             result = {
@@ -248,7 +248,7 @@ class QualityGrader:
             return result
             
         except Exception as e:
-            logger.error(f"❌ 分级失败: {str(e)}")
+            logger.error(f"分级失败: {str(e)}")
             raise
         finally:
             # 清理临时文件
@@ -296,7 +296,7 @@ class QualityGrader:
         if not paths_to_process:
             raise ValueError("未找到要分级的图片，请提供 image_paths 或有效的 image_dir")
         
-        logger.info(f"📦 开始批量分级，共 {len(paths_to_process)} 张图片")
+        logger.info(f"开始批量分级，共 {len(paths_to_process)} 张图片")
         
         results = []
         success_count = 0
@@ -321,7 +321,7 @@ class QualityGrader:
                     'timestamp': datetime.now().isoformat()
                 })
         
-        logger.info(f"✅ 批量分级完成: 成功 {success_count}/{len(paths_to_process)}")
+        logger.info(f"批量分级完成: 成功 {success_count}/{len(paths_to_process)}")
         return results
     
     def get_drift_status(self) -> Dict[str, Any]:
@@ -416,7 +416,7 @@ class QualityGrader:
             dict: 检测结果摘要
         """
         try:
-            logger.info("🔄 手动触发漂移检测...")
+            logger.info("手动触发漂移检测...")
             
             # 检查必要的文件是否存在
             baseline_path = os.path.join(BASELINE_ASSETS_DIR, "baseline_db.pkl")
@@ -431,7 +431,7 @@ class QualityGrader:
             generator = DriftReportGenerator(baseline_path, test_path)
             report = generator.generate_report(output_path=self.drift_report_path)
             
-            logger.info("✅ 漂移检测完成")
+            logger.info("漂移检测完成")
             
             # 返回简要结果
             return {
@@ -658,7 +658,7 @@ async def api_model_info():
 
 def start_server(host: str = "0.0.0.0", port: int = 8080):
     """启动 API 服务器"""
-    logger.info(f"🚀 启动 RoseGrade API 服务器: http://{host}:{port}")
+    logger.info(f"启动 RoseGrade API 服务器: http://{host}:{port}")
     logger.info(f"📖 API 文档: http://{host}:{port}/docs")
     uvicorn.run(app, host=host, port=port)
 

@@ -25,14 +25,14 @@ def cmd_collect(args):
     
     # 检查模型文件是否存在
     if not os.path.exists(model_path):
-        print(f"❌ 错误: 模型文件不存在: {model_path}")
+        print(f"错误: 模型文件不存在: {model_path}")
         sys.exit(1)
     
     if not os.path.exists(dataset_root):
-        print(f"❌ 错误: 数据集目录不存在: {dataset_root}")
+        print(f"错误: 数据集目录不存在: {dataset_root}")
         sys.exit(1)
     
-    print(f"📦 开始收集基准资产...")
+    print(f"开始收集基准资产...")
     print(f"   模型路径: {model_path}")
     print(f"   数据集目录: {dataset_root}")
     
@@ -44,13 +44,13 @@ def cmd_collect(args):
         df = collector.run()
         if df is not None:
             collector.save_assets(df)
-            print("✅ 基准资产收集完成！")
+            print("基准资产收集完成！")
             print(f"   资产保存位置: {BASELINE_ASSETS_DIR}")
         else:
-            print("⚠️ 未收集到有效数据")
+            print("未收集到有效数据")
             sys.exit(1)
     except Exception as e:
-        print(f"❌ 收集基准资产失败: {e}")
+        print(f"收集基准资产失败: {e}")
         sys.exit(1)
 
 
@@ -66,16 +66,16 @@ def cmd_detect(args):
     test_path = os.path.join(BASELINE_ASSETS_DIR, "val_test_data.pkl")
     
     if not os.path.exists(baseline_path):
-        print(f"❌ 错误: 基准数据不存在: {baseline_path}")
+        print(f"错误: 基准数据不存在: {baseline_path}")
         print("   请先运行 'python main.py collect' 收集基准资产")
         sys.exit(1)
     
     if not os.path.exists(test_path):
-        print(f"❌ 错误: 测试数据不存在: {test_path}")
+        print(f"错误: 测试数据不存在: {test_path}")
         print("   请先运行 'python main.py collect' 收集基准资产")
         sys.exit(1)
     
-    print(f"🔍 开始执行漂移检测...")
+    print(f"开始执行漂移检测...")
     print(f"   基准数据: {baseline_path}")
     print(f"   测试数据: {test_path}")
     
@@ -90,15 +90,15 @@ def cmd_detect(args):
         
         print("\n" + "=" * 50)
         if is_drift:
-            print("🚨 检测到数据漂移！")
+            print("检测到数据漂移！")
         else:
-            print("✅ 数据分布稳定")
+            print("数据分布稳定")
         print(f"   MMD 分数: {mmd_score:.4f}")
         print(f"   状态: {status}")
         print("=" * 50)
         print(f"\n📄 漂移检测完成！报告已保存至: {output}")
     except Exception as e:
-        print(f"❌ 漂移检测失败: {e}")
+        print(f"漂移检测失败: {e}")
         sys.exit(1)
 
 
@@ -114,7 +114,7 @@ def cmd_grade(args):
         if args.image:
             # 单张图片分级
             if not os.path.exists(args.image):
-                print(f"❌ 错误: 图片文件不存在: {args.image}")
+                print(f"错误: 图片文件不存在: {args.image}")
                 sys.exit(1)
             
             print(f"🖼️ 开始分级单张图片: {args.image}")
@@ -124,7 +124,7 @@ def cmd_grade(args):
             
             # 漂亮地格式化输出结果
             print("\n" + "=" * 60)
-            print("📊 分级结果")
+            print("分级结果")
             print("=" * 60)
             print(f"图片路径: {args.image}")
             print(f"最终等级: {result['grade']} 级")
@@ -153,10 +153,10 @@ def cmd_grade(args):
         elif args.dir:
             # 批量分级
             if not os.path.exists(args.dir):
-                print(f"❌ 错误: 目录不存在: {args.dir}")
+                print(f"错误: 目录不存在: {args.dir}")
                 sys.exit(1)
             
-            print(f"📦 开始批量分级目录: {args.dir}")
+            print(f"开始批量分级目录: {args.dir}")
             print(f"   季节参数: {season}")
             
             results = grader.grade_batch(image_dir=args.dir)
@@ -172,7 +172,7 @@ def cmd_grade(args):
                     grade_counts[r['grade']] += 1
             
             print("\n" + "=" * 60)
-            print("📊 批量分级统计")
+            print("批量分级统计")
             print("=" * 60)
             print(f"总计处理: {total_count} 张图片")
             print(f"成功: {success_count} 张")
@@ -195,11 +195,11 @@ def cmd_grade(args):
                     print(f"  {i+1}. {r['image_name']}: 处理失败 - {r['error']}")
             
         else:
-            print("❌ 错误: 请指定 --image 或 --dir 参数")
+            print("错误: 请指定 --image 或 --dir 参数")
             sys.exit(1)
             
     except Exception as e:
-        print(f"❌ 分级失败: {e}")
+        print(f"分级失败: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -213,7 +213,7 @@ def cmd_serve(args):
     port = args.port or 8080
     
     print("=" * 60)
-    print("🚀 RoseGrade 花卉智能分级 API 服务")
+    print("RoseGrade 花卉智能分级 API 服务")
     print("=" * 60)
     print(f"服务地址: http://{host}:{port}")
     print(f"API 文档: http://{host}:{port}/docs")
@@ -234,7 +234,7 @@ def cmd_serve(args):
     except KeyboardInterrupt:
         print("\n\n👋 服务已停止")
     except Exception as e:
-        print(f"\n❌ 服务启动失败: {e}")
+        print(f"\n服务启动失败: {e}")
         sys.exit(1)
 
 
@@ -271,12 +271,12 @@ def cmd_demo(args):
         
         # 打印汇总
         print("\n" + "=" * 60)
-        print("✅ 动态检测演示流水线完成！")
+        print("动态检测演示流水线完成！")
         print("=" * 60)
         
         windows = result.get('windows', [])
         if windows:
-            print(f"\n📊 窗口处理结果汇总:")
+            print(f"\n窗口处理结果汇总:")
             for w in windows:
                 window_id = w['window_id'] + 1
                 mmd = w.get('mmd_score', 0)
@@ -284,7 +284,7 @@ def cmd_demo(args):
                 triggered = w.get('triggered_training', False)
                 has_perturbation = w.get('has_perturbation', False)
                 
-                status_icon = "🚨" if is_drift else "✅"
+                status_icon = "" if is_drift else ""
                 perturbation_mark = " [HSV扰动]" if has_perturbation else ""
                 training_mark = " [触发训练]" if triggered else ""
                 
@@ -293,15 +293,15 @@ def cmd_demo(args):
             
             training_result = result.get('training_result')
             if training_result:
-                print(f"\n🔄 增量训练信息:")
+                print(f"\n增量训练信息:")
                 print(f"  触发窗口: 窗口 {training_result.get('triggered_at_window', 0) + 1}")
                 print(f"  融合模型: {training_result.get('fused_model', 'N/A')}")
         
-        print(f"\n📁 报告保存位置: {report_dir}")
+        print(f"\n报告保存位置: {report_dir}")
         print("=" * 60)
         
     except Exception as e:
-        print(f"\n❌ 演示流水线执行失败: {e}")
+        print(f"\n演示流水线执行失败: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -315,11 +315,11 @@ def cmd_visualize(args):
     output_dir = args.output or 'reports'
     
     if not os.path.exists(report_path):
-        print(f"❌ 错误: 漂移报告不存在: {report_path}")
+        print(f"错误: 漂移报告不存在: {report_path}")
         print("   请先运行 'python main.py detect' 生成漂移报告")
         sys.exit(1)
     
-    print(f"📊 开始生成可视化报告...")
+    print(f"开始生成可视化报告...")
     print(f"   输入报告: {report_path}")
     print(f"   输出目录: {output_dir}")
     
@@ -329,7 +329,7 @@ def cmd_visualize(args):
         
         if html_path:
             print("\n" + "=" * 60)
-            print("✅ 可视化报告生成完成！")
+            print("可视化报告生成完成！")
             print("=" * 60)
             print(f"HTML报告: {html_path}")
             print(f"图表目录: {output_dir}")
@@ -339,11 +339,11 @@ def cmd_visualize(args):
             print("  - 样本异常分布 (anomaly_distribution.png)")
             print("=" * 60)
         else:
-            print("⚠️ 可视化报告生成失败，请检查报告文件格式")
+            print("可视化报告生成失败，请检查报告文件格式")
             sys.exit(1)
             
     except Exception as e:
-        print(f"❌ 生成可视化报告失败: {e}")
+        print(f"生成可视化报告失败: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

@@ -116,7 +116,7 @@ class DriftReportGenerator:
             return report
 
         except Exception as e:
-            logger.error(f"❌ 报告生成失败: {e}")
+            logger.error(f"报告生成失败: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -130,8 +130,8 @@ if __name__ == "__main__":
         test_path = os.path.join(BASELINE_ASSETS_DIR, "val_test_data.pkl")
         generator = DriftReportGenerator(baseline_path, test_path)
         generator.generate_report()
-        logger.info("✅ 漂移报告生成成功！")
+        logger.info("漂移报告生成成功！")
     except Exception as e:
-        logger.error(f"❌ 报告生成失败: {e}")
+        logger.error(f"报告生成失败: {e}")
         import traceback
         traceback.print_exc()

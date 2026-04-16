@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 class YOLO11AutoCollector:
     def __init__(self, model_path, dataset_root=None):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        logger.info(f"📡 运行设备: {self.device}")
+        logger.info(f"运行设备: {self.device}")
         
         if dataset_root is None:
             dataset_root = DATASET_DIR
@@ -35,7 +35,7 @@ class YOLO11AutoCollector:
     def _lock_feature_layer(self):
         layers = list(self.model.model.model)
         idx = len(layers) - 2
-        logger.info(f"🎯 锁定特征层: 索引 [{idx}], 类型 [{layers[idx].__class__.__name__}]")
+        logger.info(f"锁定特征层: 索引 [{idx}], 类型 [{layers[idx].__class__.__name__}]")
         return idx
 
     def _hook_fn(self, module, input, output):
@@ -52,7 +52,7 @@ class YOLO11AutoCollector:
 
     def run(self):
         if not self.dataset_root.exists():
-            logger.error(f"❌ 路径不存在: {self.dataset_root}")
+            logger.error(f"路径不存在: {self.dataset_root}")
             return None
 
         img_list = [
@@ -60,10 +60,10 @@ class YOLO11AutoCollector:
             if p.suffix.lower() in [".jpg", ".png", ".jpeg"]
         ]
         if not img_list:
-            logger.warning(f"⚠️ 未找到图片。")
+            logger.warning(f"未找到图片。")
             return None
 
-        logger.info(f"🚀 开始处理 {len(img_list)} 张图片...")
+        logger.info(f"开始处理 {len(img_list)} 张图片...")
         all_records = []
 
         results = self.model.predict(
@@ -77,7 +77,7 @@ class YOLO11AutoCollector:
 
         for res in results:
             if not self._current_batch_features:
-                logger.warning(f"⚠️ 未抓取到特征: {res.path}")
+                logger.warning(f"未抓取到特征: {res.path}")
                 continue
 
             img_emb = self._current_batch_features.pop(0)
@@ -101,7 +101,7 @@ class YOLO11AutoCollector:
             self._hook_handle.remove()
 
         df = pd.DataFrame(all_records)
-        logger.info(f"✅ 特征提取完成: {df.shape}")
+        logger.info(f"特征提取完成: {df.shape}")
         return df
 
     def save_assets(self, df, folder=None, pca=None, scaler=None):
@@ -121,14 +121,14 @@ class YOLO11AutoCollector:
             pca_scaler_path = os.path.join(folder, "pca_scaler.pkl")
             with open(pca_scaler_path, "wb") as f:
                 pickle.dump({"scaler": scaler, "pca": pca, "names": self.label_map}, f)
-            logger.info(f"📦 训练集基准资产已保存至: {folder}")
+            logger.info(f"训练集基准资产已保存至: {folder}")
         else:
             # 验证集使用已有 PCA + Scaler
             X_pca = pca.transform(scaler.transform(X))
             df['embedding_pca'] = list(X_pca.astype(np.float16))
             val_test_path = os.path.join(folder, "val_test_data.pkl")
             df.drop(columns=['image_embedding']).to_pickle(val_test_path)
-            logger.info(f"📦 验证集 embedding 已保存至: {val_test_path}")
+            logger.info(f"验证集 embedding 已保存至: {val_test_path}")
         return pca, scaler
 
 

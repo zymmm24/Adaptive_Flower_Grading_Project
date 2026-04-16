@@ -26,7 +26,7 @@ class DriftDetector:
         self.baseline_df = pd.read_pickle(baseline_path)
         self.baseline_X = np.stack(self.baseline_df["embedding_pca"].values).astype(np.float32)
         self.baseline_labels = self.baseline_df['label'].values
-        logger.info(f"✅ 基准库加载成功: {len(self.baseline_X)} 样本")
+        logger.info(f"基准库加载成功: {len(self.baseline_X)} 样本")
 
     # -------- 全局漂移 MMD --------
     def _estimate_gamma(self, X, Y):
@@ -110,7 +110,7 @@ class DriftDetector:
         with open(save_path, "wb") as f:
             pickle.dump(result, f)
 
-        logger.info(f"📝 中间漂移检测结果已保存至: {save_path}")
+        logger.info(f"中间漂移检测结果已保存至: {save_path}")
         return result
 
 # -----------------------------
@@ -121,9 +121,9 @@ if __name__ == "__main__":
         detector = DriftDetector()
         val_test_path = os.path.join(BASELINE_ASSETS_DIR, "val_test_data.pkl")
         detector.detect(val_test_path)
-        logger.info("✅ 脚本执行成功完成！")
+        logger.info("脚本执行成功完成！")
     except Exception as e:
-        logger.error(f"❌ 脚本执行失败: {e}")
+        logger.error(f"脚本执行失败: {e}")
         import traceback
         traceback.print_exc()
 

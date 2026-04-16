@@ -34,7 +34,7 @@ class AutoTrainer:
             dataset_dir: 数据集根目录
         """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        logger.info(f"📡 运行设备: {self.device}")
+        logger.info(f"运行设备: {self.device}")
 
         # 设置基础模型路径
         if base_model_path is None:
@@ -56,7 +56,7 @@ class AutoTrainer:
         # 模型版本计数器
         self.model_version = self._get_next_version()
 
-        logger.info(f"✅ AutoTrainer 初始化完成")
+        logger.info(f"AutoTrainer 初始化完成")
         logger.info(f"   基础模型: {self.base_model_path}")
         logger.info(f"   数据集目录: {self.dataset_dir}")
         logger.info(f"   模型保存目录: {MODELS_DIR}")
@@ -68,7 +68,7 @@ class AutoTrainer:
                 with open(self.history_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-                logger.warning(f"⚠️ 加载训练历史失败: {e}")
+                logger.warning(f"加载训练历史失败: {e}")
         return []
 
     def _save_training_history(self):
@@ -77,7 +77,7 @@ class AutoTrainer:
             with open(self.history_file, 'w', encoding='utf-8') as f:
                 json.dump(self.training_history, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f"❌ 保存训练历史失败: {e}")
+            logger.error(f"保存训练历史失败: {e}")
 
     def _get_next_version(self) -> int:
         """获取下一个模型版本号"""
@@ -108,7 +108,7 @@ class AutoTrainer:
             drift_report_path = os.path.join(BASE_DIR, "drift_report.json")
 
         if not os.path.exists(drift_report_path):
-            logger.warning(f"⚠️ 漂移报告不存在: {drift_report_path}")
+            logger.warning(f"漂移报告不存在: {drift_report_path}")
             return {
                 'should_retrain': False,
                 'severity': 'none',
@@ -158,18 +158,18 @@ class AutoTrainer:
             }
 
             if should_retrain:
-                logger.info(f"🚨 检测到数据漂移，建议重训练")
+                logger.info(f"检测到数据漂移，建议重训练")
                 logger.info(f"   MMD分数: {mmd_score:.4f} (阈值: {mmd_threshold})")
                 logger.info(f"   严重程度: {severity}")
                 logger.info(f"   漂移类别: {drifted_classes}")
             else:
-                logger.info(f"✅ 数据分布稳定，无需重训练")
+                logger.info(f"数据分布稳定，无需重训练")
                 logger.info(f"   MMD分数: {mmd_score:.4f} (阈值: {mmd_threshold})")
 
             return result
 
         except Exception as e:
-            logger.error(f"❌ 解析漂移报告失败: {e}")
+            logger.error(f"解析漂移报告失败: {e}")
             return {
                 'should_retrain': False,
                 'severity': 'error',
@@ -201,7 +201,7 @@ class AutoTrainer:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_dir = os.path.join(BASE_DIR, "incremental_data", f"mixed_{timestamp}")
 
-        logger.info(f"📦 准备增量训练数据...")
+        logger.info(f"准备增量训练数据...")
         logger.info(f"   新样本目录: {new_sample_dir}")
         logger.info(f"   旧数据目录: {old_dataset_dir}")
         logger.info(f"   混合比例: {mix_ratio * 100:.0f}% 旧数据")
@@ -297,7 +297,7 @@ class AutoTrainer:
 
             logger.info(f"   类别 {class_name}: {len(new_samples)} 新样本 + {len(sampled_old)} 旧样本")
 
-        logger.info(f"✅ 增量数据集准备完成")
+        logger.info(f"增量数据集准备完成")
         logger.info(f"   总新样本: {total_new}, 总旧样本: {total_old}")
         logger.info(f"   输出路径: {output_dir}")
 
@@ -329,7 +329,7 @@ class AutoTrainer:
         if not os.path.exists(self.base_model_path):
             raise FileNotFoundError(f"基础模型不存在: {self.base_model_path}")
 
-        logger.info(f"🚀 开始增量训练...")
+        logger.info(f"开始增量训练...")
         logger.info(f"   基础模型: {self.base_model_path}")
         logger.info(f"   数据目录: {data_dir}")
         logger.info(f"   训练轮数: {epochs}")
@@ -377,11 +377,11 @@ class AutoTrainer:
                     BASE_DIR, "runs", "classify", train_output_dir, "weights", "best.pt"
                 )
                 shutil.copy2(latest_model, model_path)
-                logger.info(f"📦 模型已保存: {model_path}")
+                logger.info(f"模型已保存: {model_path}")
             else:
                 # 直接保存当前模型
                 model.save(model_path)
-                logger.info(f"📦 模型已保存: {model_path}")
+                logger.info(f"模型已保存: {model_path}")
 
             # 提取训练指标
             metrics = {
@@ -398,6 +398,52 @@ class AutoTrainer:
                 metrics_dict = results.results_dict
                 metrics['top1_accuracy'] = metrics_dict.get('metrics/accuracy_top1', None)
                 metrics['top5_accuracy'] = metrics_dict.get('metrics/accuracy_top5', None)
+            
+            # 方法2: 从 metrics 对象中提取
+            if metrics['top1_accuracy'] is None and hasattr(results, 'metrics'):
+                if hasattr(results.metrics, 'top1'):
+                    metrics['top1_accuracy'] = float(results.metrics.top1)
+                if hasattr(results.metrics, 'top5'):
+                    metrics['top5_accuracy'] = float(results.metrics.top5)
+            
+            # 方法3: 从 results.csv 文件中读取最后一轮的准确率
+            if metrics['top1_accuracy'] is None:
+                try:
+                    import csv
+                    results_csv_path = os.path.join(BASE_DIR, "runs", "classify", "train", "results.csv")
+                    if os.path.exists(results_csv_path):
+                        with open(results_csv_path, 'r') as f:
+                            reader = csv.DictReader(f)
+                            rows = list(reader)
+                            if rows:
+                                last_row = rows[-1]
+                                for key in last_row.keys():
+                                    if 'accuracy_top1' in key or 'top1_acc' in key:
+                                        metrics['top1_accuracy'] = float(last_row[key])
+                                    if 'accuracy_top5' in key or 'top5_acc' in key:
+                                        metrics['top5_accuracy'] = float(last_row[key])
+                except Exception as e:
+                    logger.debug(f"从 CSV 读取准确率失败: {e}")
+            
+            # 方法4: 如果训练时没有验证集，手动在验证集上评估
+            if metrics['top1_accuracy'] is None:
+                logger.info("在验证集上评估模型性能...")
+                try:
+                    val_data_dir = os.path.join(os.path.dirname(data_dir.rstrip('/\\')), 'val')
+                    if not os.path.exists(val_data_dir):
+                        val_data_dir = os.path.join(self.dataset_dir, 'val')
+                    
+                    if os.path.exists(val_data_dir):
+                        val_results = model.val(data=data_dir, imgsz=imgsz, device=self.device)
+                        if hasattr(val_results, 'top1'):
+                            metrics['top1_accuracy'] = float(val_results.top1)
+                        if hasattr(val_results, 'top5'):
+                            metrics['top5_accuracy'] = float(val_results.top5)
+                        logger.info(f"   Top-1 准确率: {metrics['top1_accuracy']:.4f}")
+                    else:
+                        logger.warning(f"   未找到验证集，无法评估准确率")
+                except Exception as e:
+                    logger.warning(f"   验证失败: {e}")
 
             # 记录训练历史
             history_entry = {
@@ -412,7 +458,7 @@ class AutoTrainer:
             self.training_history.append(history_entry)
             self._save_training_history()
 
-            logger.info(f"✅ 增量训练完成")
+            logger.info(f"增量训练完成")
             logger.info(f"   模型版本: v{self.model_version}")
             logger.info(f"   保存路径: {model_path}")
 
@@ -422,7 +468,7 @@ class AutoTrainer:
             }
 
         except Exception as e:
-            logger.error(f"❌ 增量训练失败: {e}")
+            logger.error(f"增量训练失败: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -442,7 +488,7 @@ class AutoTrainer:
         Returns:
             str: 融合模型保存路径
         """
-        logger.info(f"🔗 开始模型融合...")
+        logger.info(f"开始模型融合...")
         logger.info(f"   旧模型: {old_model_path}")
         logger.info(f"   新模型: {new_model_path}")
         logger.info(f"   融合系数: alpha={alpha} (新模型权重)")
@@ -470,7 +516,7 @@ class AutoTrainer:
                 else:
                     # 如果旧模型中没有该参数，直接使用新模型的
                     fused_state[key] = new_state[key]
-                    logger.warning(f"⚠️ 参数 {key} 在旧模型中不存在，使用新模型值")
+                    logger.warning(f"参数 {key} 在旧模型中不存在，使用新模型值")
 
             # 加载融合后的权重到新模型
             new_model.model.load_state_dict(fused_state)
@@ -482,7 +528,7 @@ class AutoTrainer:
 
             new_model.save(fused_path)
 
-            logger.info(f"✅ 模型融合完成")
+            logger.info(f"模型融合完成")
             logger.info(f"   融合模型: {fused_path}")
 
             # 记录历史
@@ -501,7 +547,7 @@ class AutoTrainer:
             return fused_path
 
         except Exception as e:
-            logger.error(f"❌ 模型融合失败: {e}")
+            logger.error(f"模型融合失败: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -530,7 +576,7 @@ class AutoTrainer:
         if val_dir is None:
             val_dir = os.path.join(self.dataset_dir, "val")
 
-        logger.info(f"📊 开始评估模型...")
+        logger.info(f"开始评估模型...")
         logger.info(f"   模型: {model_path}")
         logger.info(f"   验证集: {val_dir}")
 
@@ -559,7 +605,7 @@ class AutoTrainer:
                         true_labels.append(class_name)
 
             if not val_images:
-                logger.warning(f"⚠️ 验证集中未找到图片")
+                logger.warning(f"验证集中未找到图片")
                 return {
                     'top1_accuracy': 0.0,
                     'top5_accuracy': 0.0,
@@ -623,7 +669,7 @@ class AutoTrainer:
                     'total': stats['total']
                 }
 
-            logger.info(f"✅ 评估完成")
+            logger.info(f"评估完成")
             logger.info(f"   Top-1 准确率: {top1_accuracy * 100:.2f}%")
             logger.info(f"   Top-5 准确率: {top5_accuracy * 100:.2f}%")
 
@@ -634,7 +680,7 @@ class AutoTrainer:
             }
 
         except Exception as e:
-            logger.error(f"❌ 模型评估失败: {e}")
+            logger.error(f"模型评估失败: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -665,7 +711,7 @@ class AutoTrainer:
             dict: 包含整个流程的结果
         """
         logger.info("=" * 60)
-        logger.info("🔄 启动自动更新循环")
+        logger.info("启动自动更新循环")
         logger.info("=" * 60)
 
         result = {
@@ -685,14 +731,14 @@ class AutoTrainer:
             result['drift_check'] = drift_result
 
             if not drift_result['should_retrain']:
-                logger.info("✅ 无需重训练，流程结束")
+                logger.info("无需重训练，流程结束")
                 result['success'] = True
                 return result
 
             # Step 2: 准备增量数据
             logger.info("\n[Step 2/6] 准备增量数据...")
             if new_data_dir is None:
-                logger.warning("⚠️ 未提供新数据目录，使用原始训练数据")
+                logger.warning("未提供新数据目录，使用原始训练数据")
                 mixed_data_dir = self.dataset_dir
             else:
                 mixed_data_dir = self.prepare_incremental_data(
@@ -749,7 +795,7 @@ class AutoTrainer:
 
                 logger.info(f"   模型已更新: {self.base_model_path}")
             else:
-                logger.info("\n⚠️ 融合模型表现不如旧模型，保持原模型")
+                logger.info("\n融合模型表现不如旧模型，保持原模型")
                 result['model_updated'] = False
                 result['success'] = True
 
@@ -757,13 +803,13 @@ class AutoTrainer:
             self.model_version = self._get_next_version()
 
             logger.info("=" * 60)
-            logger.info("✅ 自动更新循环完成")
+            logger.info("自动更新循环完成")
             logger.info("=" * 60)
 
             return result
 
         except Exception as e:
-            logger.error(f"❌ 自动更新循环失败: {e}")
+            logger.error(f"自动更新循环失败: {e}")
             import traceback
             traceback.print_exc()
             result['error'] = str(e)
