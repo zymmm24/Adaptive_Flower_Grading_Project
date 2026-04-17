@@ -112,7 +112,7 @@ class DriftReportGenerator:
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(report, f, ensure_ascii=False, indent=2)
 
-            logger.info(f"📄 漂移报告已生成: {output_path}")
+            logger.info(f"漂移报告已生成: {output_path}")
             return report
 
         except Exception as e:

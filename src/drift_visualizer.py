@@ -758,7 +758,7 @@ class DriftVisualizer:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             
-            logger.info(f"📄 HTML报告已生成: {output_path}")
+            logger.info(f"HTML报告已生成: {output_path}")
             
         except Exception as e:
             logger.error(f"HTML报告生成失败: {e}")

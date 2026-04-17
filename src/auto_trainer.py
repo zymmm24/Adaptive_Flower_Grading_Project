@@ -274,8 +274,16 @@ class AutoTrainer:
             else:
                 sampled_old = []
 
+            # 新数据过采样：如果新数据少于旧数据，用有放回抽样补齐
+            # 确保新旧数据量平衡，防止模型偏向旧数据
+            if len(new_samples) < len(sampled_old) and len(new_samples) > 0:
+                oversampled_new = random.choices(new_samples, k=len(sampled_old))
+                logger.info(f"   类别 {class_name}: 新数据从 {len(new_samples)} 张过采样至 {len(oversampled_new)} 张")
+            else:
+                oversampled_new = new_samples
+
             # 合并并打乱
-            all_samples = new_samples + sampled_old
+            all_samples = oversampled_new + sampled_old
             random.shuffle(all_samples)
 
             # 划分训练集和验证集 (80/20)
@@ -307,7 +315,8 @@ class AutoTrainer:
                           epochs: int = 10,
                           lr: float = 0.001,
                           imgsz: int = 224,
-                          batch: int = 16) -> Dict[str, Any]:
+                          batch: int = 16,
+                          model_path: Optional[str] = None) -> Dict[str, Any]:
         """
         增量微调训练
 
@@ -319,6 +328,7 @@ class AutoTrainer:
             lr: 学习率 (增量训练用较小学习率)
             imgsz: 输入图片尺寸
             batch: 批次大小
+            model_path: 用于增量训练的起始模型路径 (默认使用 base_model_path)
 
         Returns:
             dict: {'model_path': str, 'metrics': dict}
@@ -326,11 +336,14 @@ class AutoTrainer:
         if data_dir is None:
             data_dir = self.dataset_dir
 
-        if not os.path.exists(self.base_model_path):
-            raise FileNotFoundError(f"基础模型不存在: {self.base_model_path}")
+        # 使用指定的模型路径或默认基础模型
+        train_start_model = model_path if model_path else self.base_model_path
+        
+        if not os.path.exists(train_start_model):
+            raise FileNotFoundError(f"起始模型不存在: {train_start_model}")
 
         logger.info(f"开始增量训练...")
-        logger.info(f"   基础模型: {self.base_model_path}")
+        logger.info(f"   起始模型: {train_start_model}")
         logger.info(f"   数据目录: {data_dir}")
         logger.info(f"   训练轮数: {epochs}")
         logger.info(f"   学习率: {lr}")
@@ -338,10 +351,20 @@ class AutoTrainer:
         logger.info(f"   批次大小: {batch}")
 
         try:
-            # 加载基础模型
-            model = YOLO(self.base_model_path)
+            # 加载起始模型，并记录训练前的权重用于验证
+            model = YOLO(train_start_model)
+            try:
+                import torch
+                pre_train_state = {k: v.clone() for k, v in model.model.state_dict().items()}
+            except Exception as _e:
+                pre_train_state = None
+                logger.debug(f"无法记录训练前权重用于对比: {_e}")
 
-            # 执行训练
+            # 为本次训练生成唯一的输出目录名，避免 exist_ok 复用旧结果
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            train_run_name = f"train_incr_v{self.model_version}_{timestamp}"
+
+            # 执行训练 - 使用唯一目录名，exist_ok=False 确保不复用旧目录
             results = model.train(
                 data=data_dir,
                 epochs=epochs,
@@ -349,39 +372,60 @@ class AutoTrainer:
                 imgsz=imgsz,
                 batch=batch,
                 device=self.device,
-                exist_ok=True,
+                project=os.path.join(BASE_DIR, "runs", "classify"),
+                name=train_run_name,
+                exist_ok=False,
                 verbose=True
             )
 
             # 生成模型文件名
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             model_filename = f"model_v{self.model_version}_{timestamp}.pt"
             model_path = os.path.join(MODELS_DIR, model_filename)
 
-            # 保存训练后的模型
-            # YOLO 训练后会自动保存到 runs/classify/train*/weights/best.pt
-            # 我们需要复制到 models/ 目录
-            train_output_dir = None
-            for subdir in os.listdir(os.path.join(BASE_DIR, "runs", "classify")):
-                if subdir.startswith("train"):
-                    potential_path = os.path.join(
-                        BASE_DIR, "runs", "classify", subdir, "weights", "best.pt"
-                    )
-                    if os.path.exists(potential_path):
-                        # 找到最新的
-                        if train_output_dir is None or subdir > train_output_dir:
-                            train_output_dir = subdir
+            # 优先从 model.trainer.best 获取本次训练产出的 best.pt 路径
+            best_pt_path = None
+            if hasattr(model, 'trainer') and model.trainer is not None:
+                trainer_best = getattr(model.trainer, 'best', None)
+                if trainer_best and os.path.exists(str(trainer_best)):
+                    best_pt_path = str(trainer_best)
+                    logger.info(f"从 model.trainer.best 获取训练结果: {best_pt_path}")
 
-            if train_output_dir:
-                latest_model = os.path.join(
-                    BASE_DIR, "runs", "classify", train_output_dir, "weights", "best.pt"
+            # 备用方案：直接定位本次训练的输出目录
+            if best_pt_path is None:
+                expected_best = os.path.join(
+                    BASE_DIR, "runs", "classify", train_run_name, "weights", "best.pt"
                 )
-                shutil.copy2(latest_model, model_path)
+                if os.path.exists(expected_best):
+                    best_pt_path = expected_best
+                    logger.info(f"从预期目录获取训练结果: {best_pt_path}")
+
+            if best_pt_path:
+                shutil.copy2(best_pt_path, model_path)
                 logger.info(f"模型已保存: {model_path}")
             else:
-                # 直接保存当前模型
+                # 最终备用：直接保存当前模型对象
                 model.save(model_path)
-                logger.info(f"模型已保存: {model_path}")
+                logger.info(f"模型已保存 (直接导出): {model_path}")
+
+            # 权重变化检测（诊断用）
+            if pre_train_state is not None:
+                try:
+                    import torch
+                    post_model = YOLO(model_path)
+                    post_state = post_model.model.state_dict()
+                    changed = sum(
+                        1 for k in pre_train_state
+                        if k in post_state and not torch.equal(pre_train_state[k].cpu(), post_state[k].cpu())
+                    )
+                    total = len(pre_train_state)
+                    logger.info(f"权重变化检测: {changed}/{total} 个参数层发生变化")
+                    if changed == 0:
+                        logger.error(
+                            "权重变化检测: 0 个参数层发生变化，训练可能未生效！"
+                            f" 请检查训练目录 runs/classify/{train_run_name}"
+                        )
+                except Exception as _e:
+                    logger.debug(f"权重变化检测失败: {_e}")
 
             # 提取训练指标
             metrics = {
@@ -406,11 +450,13 @@ class AutoTrainer:
                 if hasattr(results.metrics, 'top5'):
                     metrics['top5_accuracy'] = float(results.metrics.top5)
             
-            # 方法3: 从 results.csv 文件中读取最后一轮的准确率
+            # 方法3: 从本次训练的 results.csv 中读取最后一轮的准确率
             if metrics['top1_accuracy'] is None:
                 try:
                     import csv
-                    results_csv_path = os.path.join(BASE_DIR, "runs", "classify", "train", "results.csv")
+                    results_csv_path = os.path.join(
+                        BASE_DIR, "runs", "classify", train_run_name, "results.csv"
+                    )
                     if os.path.exists(results_csv_path):
                         with open(results_csv_path, 'r') as f:
                             reader = csv.DictReader(f)
@@ -419,9 +465,9 @@ class AutoTrainer:
                                 last_row = rows[-1]
                                 for key in last_row.keys():
                                     if 'accuracy_top1' in key or 'top1_acc' in key:
-                                        metrics['top1_accuracy'] = float(last_row[key])
+                                        metrics['top1_accuracy'] = float(last_row[key].strip())
                                     if 'accuracy_top5' in key or 'top5_acc' in key:
-                                        metrics['top5_accuracy'] = float(last_row[key])
+                                        metrics['top5_accuracy'] = float(last_row[key].strip())
                 except Exception as e:
                     logger.debug(f"从 CSV 读取准确率失败: {e}")
             
@@ -743,7 +789,7 @@ class AutoTrainer:
             else:
                 mixed_data_dir = self.prepare_incremental_data(
                     new_sample_dir=new_data_dir,
-                    mix_ratio=0.3
+                    mix_ratio=0.5  # 新旧数据各占50%
                 )
             result['data_preparation'] = {'mixed_data_dir': mixed_data_dir}
 
@@ -782,7 +828,7 @@ class AutoTrainer:
 
             # 决定是否更新
             if new_eval['top1_accuracy'] >= old_eval['top1_accuracy']:
-                logger.info("\n🎉 融合模型表现更好或持平，更新为基础模型")
+                logger.info("\n融合模型表现更好或持平，更新为基础模型")
                 # 备份旧模型
                 backup_path = self.base_model_path + ".backup"
                 shutil.copy2(self.base_model_path, backup_path)

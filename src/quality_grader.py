@@ -163,7 +163,7 @@ class QualityGrader:
             else:
                 raise ValueError("必须提供 image_path 或 image_bytes 之一")
             
-            logger.info(f"🖼️ 开始分级: {process_path} (来源: {source_type})")
+            logger.info(f"开始分级: {process_path} (来源: {source_type})")
             
             # ========== Step 1: YOLO11 推理 ==========
             yolo_results = self.model.predict(process_path, verbose=False)
@@ -659,7 +659,7 @@ async def api_model_info():
 def start_server(host: str = "0.0.0.0", port: int = 8080):
     """启动 API 服务器"""
     logger.info(f"启动 RoseGrade API 服务器: http://{host}:{port}")
-    logger.info(f"📖 API 文档: http://{host}:{port}/docs")
+    logger.info(f"API 文档: http://{host}:{port}/docs")
     uvicorn.run(app, host=host, port=port)
 
 

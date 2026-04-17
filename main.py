@@ -96,7 +96,7 @@ def cmd_detect(args):
         print(f"   MMD 分数: {mmd_score:.4f}")
         print(f"   状态: {status}")
         print("=" * 50)
-        print(f"\n📄 漂移检测完成！报告已保存至: {output}")
+        print(f"\n漂移检测完成！报告已保存至: {output}")
     except Exception as e:
         print(f"漂移检测失败: {e}")
         sys.exit(1)
@@ -117,7 +117,7 @@ def cmd_grade(args):
                 print(f"错误: 图片文件不存在: {args.image}")
                 sys.exit(1)
             
-            print(f"🖼️ 开始分级单张图片: {args.image}")
+            print(f"开始分级单张图片: {args.image}")
             print(f"   季节参数: {season}")
             
             result = grader.grade_single(image_path=args.image)
@@ -232,7 +232,7 @@ def cmd_serve(args):
     try:
         start_server(host=host, port=port)
     except KeyboardInterrupt:
-        print("\n\n👋 服务已停止")
+        print("\n\n服务已停止")
     except Exception as e:
         print(f"\n服务启动失败: {e}")
         sys.exit(1)
@@ -248,7 +248,7 @@ def cmd_demo(args):
     drift_threshold = args.drift_threshold or 0.05
     
     print("=" * 60)
-    print("🎬 RoseGrade 动态检测演示流水线")
+    print("RoseGrade 动态检测演示流水线")
     print("=" * 60)
     print(f"配置参数:")
     print(f"  窗口数量: {n_windows}")
